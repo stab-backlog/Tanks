@@ -8,16 +8,21 @@ class Player(pygame.sprite.Sprite):
         self.k_names = k_names
         self.info_lst = info_lst
         self.start_key = start_key
-        self.rect_size = 50, 50
+        self.rect_size = 25, 25
         self.image = pygame.Surface(self.rect_size)
         self.image.fill(color)
         self.rect = self.image.get_rect()
-        self.rect.center = start_cords
+        self.rect.x, self.rect.y = start_cords
 
     def action(self, keys):
         self.rect.move_ip(
             (keys[self.k[0]] - keys[self.k[1]]) * player_speed,
             (keys[self.k[2]] - keys[self.k[3]]) * player_speed)
+
+        if pygame.sprite.spritecollideany(self, bricks):
+            self.rect.move_ip(
+                -(keys[self.k[0]] - keys[self.k[1]]) * player_speed,
+                -(keys[self.k[2]] - keys[self.k[3]]) * player_speed)
 
         self.rect.clamp_ip(pygame.display.get_surface().get_rect())
 
@@ -98,6 +103,41 @@ class Bullet(pygame.sprite.Sprite):
             bullets_list.remove(self)
 
 
+class Wall(pygame.sprite.Sprite):
+    def __init__(self, color, rect_x, rect_y, wall_size):
+        pygame.sprite.Sprite.__init__(self)
+        self.color = color
+        self.x, self.y = rect_x, rect_y
+        self.rect_size = wall_size
+        self.image = pygame.Surface(self.rect_size)
+        self.image.fill(self.color)
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = self.x, self.y
+
+
+board = [
+    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '1', '1'],
+    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '1', '1', '1', '1', '0', '0', '1', '0', '0'],
+    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '1', '1', '1', '0', '0'],
+    ['0', '0', '0', '1', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '1', '1', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '1', '1', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '1', '1', '0', '0', '0', '0', '0', '0', '0', '1', '1', '1', '1', '0', '0', '0'],
+    ['0', '0', '0', '1', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0'],
+]
+
 fps = 60
 
 pygame.init()
@@ -111,6 +151,15 @@ players = pygame.sprite.Group()
 players_list = []
 bullets = pygame.sprite.Group()
 bullets_list = []
+bricks = pygame.sprite.Group()
+bricks_list = []
+
+for board_y in range(len(board)):
+    for board_x in range(len(board[board_y])):
+        if board[board_y][board_x] == '1':
+            brick = Wall('blue', board_x * 25, board_y * 25, (25, 25))
+            bricks.add(brick)
+            bricks_list.append(brick)
 
 # length = (None, None)
 
@@ -124,9 +173,9 @@ first_help_list = [[pygame.K_RIGHT, pygame.K_LEFT, pygame.K_DOWN, pygame.K_UP, p
 second_help_list = [[pygame.K_d, pygame.K_a, pygame.K_s, pygame.K_w, pygame.K_g],
                     ['d', 'a', 'w', 's', 'g'], 'a']
 
-player_1 = Player((50, 50), 'red', first_help_list[0], first_help_list[1], first_info_direction_list,
+player_1 = Player((0, 0), 'red', first_help_list[0], first_help_list[1], first_info_direction_list,
                   first_help_list[2])
-player_2 = Player((450, 450), 'green', second_help_list[0], second_help_list[1], second_info_direction_list,
+player_2 = Player((475, 475), 'green', second_help_list[0], second_help_list[1], second_info_direction_list,
                   second_help_list[2])
 
 players.add(player_1, player_2)
@@ -184,6 +233,9 @@ while run:
         bul.move()
 
     screen.fill('black')
+
+    bricks.update()
+    bricks.draw(screen)
 
     players.update()
     players.draw(screen)
