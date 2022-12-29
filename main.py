@@ -2,19 +2,26 @@ import pygame
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, start_cords, color, k, k_names, info_lst, start_key):
+    def __init__(self, start_cords, color, k, k_names, info_lst, start_key, player, hp_amount):
         pygame.sprite.Sprite.__init__(self)
+        self.start_cords = start_cords
         self.k = k
         self.k_names = k_names
         self.info_lst = info_lst
         self.start_key = start_key
+        self.player = player
+        self.hp = hp_amount
         self.rect_size = 25, 25
         self.image = pygame.Surface(self.rect_size)
         self.image.fill(color)
         self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = start_cords
+        self.rect.x, self.rect.y = self.start_cords
 
     def action(self, keys):
+        if self.hp == 0:
+            global run
+            run = False
+
         self.rect.move_ip(
             (keys[self.k[0]] - keys[self.k[1]]) * player_speed,
             (keys[self.k[2]] - keys[self.k[3]]) * player_speed)
@@ -24,13 +31,17 @@ class Player(pygame.sprite.Sprite):
                 -(keys[self.k[0]] - keys[self.k[1]]) * player_speed,
                 -(keys[self.k[2]] - keys[self.k[3]]) * player_speed)
 
+        if pygame.sprite.spritecollideany(self, bullets_2 if self.player == 1 else bullets_1):
+            self.hp -= 1
+            self.rect.x, self.rect.y = self.start_cords
+
         self.rect.clamp_ip(pygame.display.get_surface().get_rect())
 
         if keys[self.k[4]]:
 
             global next_bullet_time
 
-            if len(bullets_list) < max_bullets and current_time >= next_bullet_time:
+            if len(bullets_list[self.player]) < max_bullets and current_time >= next_bullet_time[-self.player]:
 
                 info = self.start_key
 
@@ -59,15 +70,20 @@ class Player(pygame.sprite.Sprite):
                 else:
                     assert False, self.info_lst
 
-                next_bullet_time = current_time + bullet_delta_time
-                bullet = Bullet(x, y, direction)
-                bullets.add(bullet)
-                bullets_list.append(bullet)
+                next_bullet_time[-self.player] = current_time + bullet_delta_time
+                bullet = Bullet(x, y, self.player, direction)
+                if self.player == 1:
+                    bullets_1.add(bullet)
+                    bullets_list[1].append(bullet)
+                if self.player == 2:
+                    bullets_2.add(bullet)
+                    bullets_list[2].append(bullet)
 
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x, y, direction=0):
+    def __init__(self, x, y, player, direction=0):
         pygame.sprite.Sprite.__init__(self)
+        self.player = player
         self.direction = direction
         self.cords = x, y
         self.rect_size = 5, 5
@@ -98,9 +114,10 @@ class Bullet(pygame.sprite.Sprite):
 
         display_rect = pygame.display.get_surface().get_rect()
 
-        if (x < display_rect[0] or x > display_rect[2]) or (y < display_rect[1] or y > display_rect[3]):
+        if (x < display_rect[0] or x > display_rect[2]) or (y < display_rect[1] or y > display_rect[3]) or \
+                pygame.sprite.spritecollideany(self, bricks):
             self.kill()
-            bullets_list.remove(self)
+            bullets_list[self.player].remove(self)
 
 
 class Wall(pygame.sprite.Sprite):
@@ -116,27 +133,28 @@ class Wall(pygame.sprite.Sprite):
 
 
 board = [
-    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '1', '1'],
-    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '1', '1', '1', '1', '0', '0', '1', '0', '0'],
-    ['0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '1', '1', '1', '0', '0'],
-    ['0', '0', '0', '1', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '1', '1', '0', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '1', '1', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0'],
-    ['0', '0', '0', '0', '1', '1', '0', '0', '0', '0', '0', '0', '0', '1', '1', '1', '1', '0', '0', '0'],
-    ['0', '0', '0', '1', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0'],
+    ['1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '1', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '1', '1', '1', '1', '1', '1', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '1', '0', '1', '1', '0', '1', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '1', '0', '1', '1', '0', '1', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '1', '1', '1', '1', '1', '1', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '1', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
+    ['1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', ],
 ]
+
 
 fps = 60
 
@@ -149,8 +167,15 @@ clock = pygame.time.Clock()
 
 players = pygame.sprite.Group()
 players_list = []
-bullets = pygame.sprite.Group()
-bullets_list = []
+
+bullets_1 = pygame.sprite.Group()
+bullets_2 = pygame.sprite.Group()
+
+bullets_list = {
+    1: [],
+    2: [],
+}
+
 bricks = pygame.sprite.Group()
 bricks_list = []
 
@@ -173,10 +198,10 @@ first_help_list = [[pygame.K_RIGHT, pygame.K_LEFT, pygame.K_DOWN, pygame.K_UP, p
 second_help_list = [[pygame.K_d, pygame.K_a, pygame.K_s, pygame.K_w, pygame.K_g],
                     ['d', 'a', 'w', 's', 'g'], 'a']
 
-player_1 = Player((0, 0), 'red', first_help_list[0], first_help_list[1], first_info_direction_list,
-                  first_help_list[2])
-player_2 = Player((475, 475), 'green', second_help_list[0], second_help_list[1], second_info_direction_list,
-                  second_help_list[2])
+player_1 = Player((25, 25), 'red', first_help_list[0], first_help_list[1], first_info_direction_list,
+                  first_help_list[2], 1, 3)
+player_2 = Player((450, 450), 'green', second_help_list[0], second_help_list[1], second_info_direction_list,
+                  second_help_list[2], 2, 3)
 
 players.add(player_1, player_2)
 players_list.append(player_1)
@@ -185,8 +210,8 @@ players_list.append(player_2)
 player_speed = 5
 bullet_speed = 10
 
-max_bullets = 5
-next_bullet_time = 0
+max_bullets = 3
+next_bullet_time = [0, 0]
 bullet_delta_time = 100
 
 run = True
@@ -229,8 +254,9 @@ while run:
     for pl in players_list:
         pl.action(key)
 
-    for bul in bullets_list:
-        bul.move()
+    for key in bullets_list:
+        for bul in bullets_list[key]:
+            bul.move()
 
     screen.fill('black')
 
@@ -240,8 +266,10 @@ while run:
     players.update()
     players.draw(screen)
 
-    bullets.update()
-    bullets.draw(screen)
+    bullets_1.update()
+    bullets_1.draw(screen)
+    bullets_2.update()
+    bullets_2.draw(screen)
 
     pygame.display.flip()
 
