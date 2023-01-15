@@ -11,6 +11,17 @@ class Player(pygame.sprite.Sprite):
         self.start_key = start_key
         self.player = player
         self.hp = hp_amount
+
+        for heartxy in range(self.hp):
+            heart = None
+            if self.player == 1:
+                heart = Hearts(color, heartxy * 75, 0, self.player)
+                hearts_1.add(heart)
+            if self.player == 2:
+                heart = Hearts(color, 700 - heartxy * 75, 700, self.player)
+                hearts_2.add(heart)
+            hearts_list[-self.player].append(heart)  # type: ignore
+
         self.rect_size = 25, 25
         self.image = pygame.Surface(self.rect_size)
         self.image.fill(color)
@@ -34,6 +45,7 @@ class Player(pygame.sprite.Sprite):
         if pygame.sprite.spritecollideany(self, bullets_2 if self.player == 1 else bullets_1):
             self.hp -= 1
             self.rect.x, self.rect.y = self.start_cords
+            hearts_list[-self.player][-1].be = True  # type: ignore
 
         self.rect.clamp_ip(pygame.display.get_surface().get_rect())
 
@@ -132,6 +144,25 @@ class Wall(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = self.x, self.y
 
 
+class Hearts(pygame.sprite.Sprite):
+    def __init__(self, color, rect_x, rect_y, player, be=False):
+        pygame.sprite.Sprite.__init__(self)
+        self.color = color
+        self.x, self.y = rect_x, rect_y
+        self.player = player
+        self.be = be
+        self.rect_size = self.width, self.height = 50, 50
+        self.image = pygame.Surface(self.rect_size)
+        self.image.fill(self.color)
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = self.x, self.y
+
+    def move(self):
+        if self.be:
+            self.kill()
+            hearts_list[-self.player].remove(self)  # type: ignore
+
+
 board = [
     ['1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', ],
     ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
@@ -155,18 +186,22 @@ board = [
     ['1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', ],
 ]
 
-
 fps = 60
 
 pygame.init()
 
-size = width, height = 500, 500
+size = width, height = 750, 750
 screen = pygame.display.set_mode(size)
+pygame.display.set_caption('Tanks')
 
 clock = pygame.time.Clock()
 
 players = pygame.sprite.Group()
 players_list = []
+
+hearts_1 = pygame.sprite.Group()
+hearts_2 = pygame.sprite.Group()
+hearts_list = [[], []]
 
 bullets_1 = pygame.sprite.Group()
 bullets_2 = pygame.sprite.Group()
@@ -182,11 +217,13 @@ bricks_list = []
 for board_y in range(len(board)):
     for board_x in range(len(board[board_y])):
         if board[board_y][board_x] == '1':
-            brick = Wall('blue', board_x * 25, board_y * 25, (25, 25))
+            brick = Wall('blue', board_x * 25 + 125, board_y * 25 + 125, (25, 25))
             bricks.add(brick)
             bricks_list.append(brick)
 
 # length = (None, None)
+
+health_amount = 3
 
 first_info_direction_list = []
 second_info_direction_list = []
@@ -198,10 +235,10 @@ first_help_list = [[pygame.K_RIGHT, pygame.K_LEFT, pygame.K_DOWN, pygame.K_UP, p
 second_help_list = [[pygame.K_d, pygame.K_a, pygame.K_s, pygame.K_w, pygame.K_g],
                     ['d', 'a', 'w', 's', 'g'], 'a']
 
-player_1 = Player((25, 25), 'red', first_help_list[0], first_help_list[1], first_info_direction_list,
-                  first_help_list[2], 1, 3)
-player_2 = Player((450, 450), 'green', second_help_list[0], second_help_list[1], second_info_direction_list,
-                  second_help_list[2], 2, 3)
+player_1 = Player((25 + 125, 25 + 125), 'red', first_help_list[0], first_help_list[1], first_info_direction_list,
+                  first_help_list[2], 1, health_amount)
+player_2 = Player((450 + 125, 450 + 125), 'green', second_help_list[0], second_help_list[1], second_info_direction_list,
+                  second_help_list[2], 2, health_amount)
 
 players.add(player_1, player_2)
 players_list.append(player_1)
@@ -258,6 +295,10 @@ while run:
         for bul in bullets_list[key]:
             bul.move()
 
+    for pl in hearts_list:
+        for hp in pl:
+            hp.move()
+
     screen.fill('black')
 
     bricks.update()
@@ -270,6 +311,11 @@ while run:
     bullets_1.draw(screen)
     bullets_2.update()
     bullets_2.draw(screen)
+
+    hearts_1.update()
+    hearts_1.draw(screen)
+    hearts_2.update()
+    hearts_2.draw(screen)
 
     pygame.display.flip()
 
