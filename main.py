@@ -1,327 +1,102 @@
-import pygame
+import sys
+from tkinter import Tk, messagebox, ttk
+import subprocess
+
+info_text = 'Players are moved by pressing the keys:\n' \
+            '\tw key and up arrow,\n\ta key and left arrow,\n\ts key and down arrow,\n\td key and right arrow.\n' \
+            'Shooting is carried out by pressing the g key or the space bar.\n' \
+            'The players have three lives (hearts).\n' \
+            'Their task is to make sure that the enemy runs out of them, respectively.'
 
 
-class Player(pygame.sprite.Sprite):
-    def __init__(self, start_cords, color, k, k_names, info_lst, start_key, player, hp_amount):
-        pygame.sprite.Sprite.__init__(self)
-        self.start_cords = start_cords
-        self.k = k
-        self.k_names = k_names
-        self.info_lst = info_lst
-        self.start_key = start_key
-        self.player = player
-        self.hp = hp_amount
+def start_game():
+    root.withdraw()
+    window = Tk()
+    window.resizable(False, False)
+    window.title('Levels')
+    window.geometry(f'+{width}+{height}')
 
-        for heartxy in range(self.hp):
-            heart = None
-            if self.player == 1:
-                heart = Hearts(color, heartxy * 75, 0, self.player)
-                hearts_1.add(heart)
-            if self.player == 2:
-                heart = Hearts(color, 700 - heartxy * 75, 700, self.player)
-                hearts_2.add(heart)
-            hearts_list[-self.player].append(heart)  # type: ignore
+    def handle_close():
+        window.destroy()
+        root.deiconify()
 
-        self.rect_size = 25, 25
-        self.image = pygame.Surface(self.rect_size)
-        self.image.fill(color)
-        self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = self.start_cords
+    window.protocol("WM_DELETE_WINDOW", handle_close)
 
-    def action(self, keys):
-        if self.hp == 0:
-            global run
-            run = False
+    define_style(window)
 
-        self.rect.move_ip(
-            (keys[self.k[0]] - keys[self.k[1]]) * player_speed,
-            (keys[self.k[2]] - keys[self.k[3]]) * player_speed)
+    def start_level(number):
+        def func():
+            window.destroy()
 
-        if pygame.sprite.spritecollideany(self, bricks):
-            self.rect.move_ip(
-                -(keys[self.k[0]] - keys[self.k[1]]) * player_speed,
-                -(keys[self.k[2]] - keys[self.k[3]]) * player_speed)
+            process = subprocess.Popen([sys.executable, 'game.py', f'{number}'])
 
-        if pygame.sprite.spritecollideany(self, bullets_2 if self.player == 1 else bullets_1):
-            self.hp -= 1
-            self.rect.x, self.rect.y = self.start_cords
-            hearts_list[-self.player][-1].be = True  # type: ignore
-
-        self.rect.clamp_ip(pygame.display.get_surface().get_rect())
-
-        if keys[self.k[4]]:
-
-            global next_bullet_time
-
-            if len(bullets_list[self.player]) < max_bullets and current_time >= next_bullet_time[-self.player]:
-
-                info = self.start_key
-
-                if not (len(self.info_lst) == 1 and self.info_lst[0] == self.k_names[4]):
-                    for btn in range(len(self.info_lst) - 1, 0, -1):
-                        if self.info_lst[btn] == self.k_names[4]:
-                            info = self.info_lst[btn - 1]
-                            break
-
-                if info == self.k_names[0]:
-                    x, y = self.rect.midright
-                    direction = 0
-
-                elif info == self.k_names[1]:
-                    x, y = self.rect.midleft
-                    direction = 2
-
-                elif info == self.k_names[2]:
-                    x, y = self.rect.midtop
-                    direction = 3
-
-                elif info == self.k_names[3]:
-                    x, y = self.rect.midbottom
-                    direction = 1
-
+            def check_process():
+                if process.poll() is None:
+                    root.after(500, check_process)
                 else:
-                    assert False, self.info_lst
+                    root.deiconify()
 
-                next_bullet_time[-self.player] = current_time + bullet_delta_time
-                bullet = Bullet(x, y, self.player, direction)
-                if self.player == 1:
-                    bullets_1.add(bullet)
-                    bullets_list[1].append(bullet)
-                if self.player == 2:
-                    bullets_2.add(bullet)
-                    bullets_list[2].append(bullet)
+            window.after(500, check_process)
 
+        return func
 
-class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x, y, player, direction=0):
-        pygame.sprite.Sprite.__init__(self)
-        self.player = player
-        self.direction = direction
-        self.cords = x, y
-        self.rect_size = 5, 5
-        self.image = pygame.Surface(self.rect_size)
-        self.image.fill('yellow')
-        self.rect = self.image.get_rect()
-        self.rect.center = self.cords
+    btn_1 = ttk.Button(window, text='1', command=start_level(1), style='W.TButton')
+    btn_1.grid(column=0, row=0)
 
-    def move(self):
-        x, y = None, None
-        if self.direction == 0:
-            self.rect.move_ip(bullet_speed, 0)
-            x, y = self.rect.midleft
+    btn_2 = ttk.Button(window, text='2', command=start_level(2), style='W.TButton')
+    btn_2.grid(column=1, row=0)
 
-        elif self.direction == 1:
-            self.rect.move_ip(0, bullet_speed)
-            x, y = self.rect.midbottom
+    btn_3 = ttk.Button(window, text='3', command=start_level(3), style='W.TButton')
+    btn_3.grid(column=2, row=0)
 
-        elif self.direction == 2:
-            self.rect.move_ip(-bullet_speed, 0)
-            x, y = self.rect.midright
+    btn_4 = ttk.Button(window, text='4', command=start_level(4), style='W.TButton')
+    btn_4.grid(column=3, row=0)
 
-        elif self.direction == 3:
-            self.rect.move_ip(0, -bullet_speed)
-            x, y = self.rect.midtop
+    btn_5 = ttk.Button(window, text='5', command=start_level(5), style='W.TButton')
+    btn_5.grid(column=4, row=0)
 
-        # self.rect.clamp_ip(pygame.display.get_surface().get_rect())
+    btn_6 = ttk.Button(window, text='6', command=start_level(6), style='W.TButton')
+    btn_6.grid(column=0, row=1)
 
-        display_rect = pygame.display.get_surface().get_rect()
+    btn_7 = ttk.Button(window, text='7', command=start_level(7), style='W.TButton')
+    btn_7.grid(column=1, row=1)
 
-        if (x < display_rect[0] or x > display_rect[2]) or (y < display_rect[1] or y > display_rect[3]) or \
-                pygame.sprite.spritecollideany(self, bricks):
-            self.kill()
-            bullets_list[self.player].remove(self)
+    btn_8 = ttk.Button(window, text='8', command=start_level(8), style='W.TButton')
+    btn_8.grid(column=2, row=1)
+
+    btn_9 = ttk.Button(window, text='9', command=start_level(9), style='W.TButton')
+    btn_9.grid(column=3, row=1)
+
+    btn_10 = ttk.Button(window, text='10', command=start_level(10), style='W.TButton')
+    btn_10.grid(column=4, row=1)
 
 
-class Wall(pygame.sprite.Sprite):
-    def __init__(self, color, rect_x, rect_y, wall_size):
-        pygame.sprite.Sprite.__init__(self)
-        self.color = color
-        self.x, self.y = rect_x, rect_y
-        self.rect_size = wall_size
-        self.image = pygame.Surface(self.rect_size)
-        self.image.fill(self.color)
-        self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = self.x, self.y
+def info_function():
+    messagebox.showinfo('Info', info_text)
 
 
-class Hearts(pygame.sprite.Sprite):
-    def __init__(self, color, rect_x, rect_y, player, be=False):
-        pygame.sprite.Sprite.__init__(self)
-        self.color = color
-        self.x, self.y = rect_x, rect_y
-        self.player = player
-        self.be = be
-        self.rect_size = self.width, self.height = 50, 50
-        self.image = pygame.Surface(self.rect_size)
-        self.image.fill(self.color)
-        self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = self.x, self.y
-
-    def move(self):
-        if self.be:
-            self.kill()
-            hearts_list[-self.player].remove(self)  # type: ignore
+def define_style(window):
+    style = ttk.Style(window)
+    style.configure('W.TButton', font=('Rockwell', 17, 'bold',), foreground='black', borderwith='5')
+    style.map('TButton', foreground=[('active', '!disabled', 'white')], background=[('active', 'black')])
 
 
-board = [
-    ['1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '1', '1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '1', '1', '1', '1', '1', '1', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '1', '0', '1', '1', '0', '1', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '1', '0', '1', '1', '0', '1', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '0', '1', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '1', '1', '1', '1', '1', '1', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '1', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', ],
-    ['1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', ],
-]
+root = Tk()
+root.resizable(False, False)
+root.title('Menu')
+width, height = (root.winfo_screenwidth() - root.winfo_reqwidth()) // 2, \
+                (root.winfo_screenheight() - root.winfo_reqheight()) // 2
+root.geometry(f'+{width}+{height}')
 
-fps = 60
+define_style(root)
 
-pygame.init()
+start_btn = ttk.Button(root, text='Start the game', command=start_game, style='W.TButton')
+start_btn.grid(column=0, row=0)
 
-size = width, height = 750, 750
-screen = pygame.display.set_mode(size)
-pygame.display.set_caption('Tanks')
+roles_btn = ttk.Button(root, text='Info', command=info_function, style='W.TButton')
+roles_btn.grid(column=0, row=1)
 
-clock = pygame.time.Clock()
+quit_btn = ttk.Button(root, text='Quit', command=root.destroy, style='W.TButton')
+quit_btn.grid(column=0, row=2)
 
-players = pygame.sprite.Group()
-players_list = []
-
-hearts_1 = pygame.sprite.Group()
-hearts_2 = pygame.sprite.Group()
-hearts_list = [[], []]
-
-bullets_1 = pygame.sprite.Group()
-bullets_2 = pygame.sprite.Group()
-
-bullets_list = {
-    1: [],
-    2: [],
-}
-
-bricks = pygame.sprite.Group()
-bricks_list = []
-
-for board_y in range(len(board)):
-    for board_x in range(len(board[board_y])):
-        if board[board_y][board_x] == '1':
-            brick = Wall('blue', board_x * 25 + 125, board_y * 25 + 125, (25, 25))
-            bricks.add(brick)
-            bricks_list.append(brick)
-
-# length = (None, None)
-
-health_amount = 3
-
-first_info_direction_list = []
-second_info_direction_list = []
-
-info_direction_list = [first_info_direction_list, second_info_direction_list]
-
-first_help_list = [[pygame.K_RIGHT, pygame.K_LEFT, pygame.K_DOWN, pygame.K_UP, pygame.K_SPACE],
-                   ['right', 'left', 'up', 'down', 'space'], 'right']
-second_help_list = [[pygame.K_d, pygame.K_a, pygame.K_s, pygame.K_w, pygame.K_g],
-                    ['d', 'a', 'w', 's', 'g'], 'a']
-
-player_1 = Player((25 + 125, 25 + 125), 'red', first_help_list[0], first_help_list[1], first_info_direction_list,
-                  first_help_list[2], 1, health_amount)
-player_2 = Player((450 + 125, 450 + 125), 'green', second_help_list[0], second_help_list[1], second_info_direction_list,
-                  second_help_list[2], 2, health_amount)
-
-players.add(player_1, player_2)
-players_list.append(player_1)
-players_list.append(player_2)
-
-player_speed = 5
-bullet_speed = 10
-
-max_bullets = 3
-next_bullet_time = [0, 0]
-bullet_delta_time = 100
-
-run = True
-while run:
-
-    clock.tick(fps)
-    current_time = pygame.time.get_ticks()
-
-    for event in pygame.event.get():
-
-        if event.type == pygame.QUIT:
-            run = False
-
-        if event.type == pygame.KEYDOWN:
-            key_name = pygame.key.name(event.key)
-            if key_name in first_help_list[1]:
-                first_info_direction_list.append(key_name)
-            if key_name in second_help_list[1]:
-                second_info_direction_list.append(key_name)
-
-    key = pygame.key.get_pressed()
-
-    for lst in info_direction_list:
-        if lst:
-            for i in range(len(lst) - 1, 0, -1):
-                if lst[i] == lst[i - 1]:
-                    del lst[i]
-
-    for lst_len in info_direction_list:
-        if len(lst_len) > 20:
-            for lst_index in range(len(lst_len) - 1, -1, -1):
-                if lst_len[lst_index] in ['g', 'space']:
-                    last_key_1 = lst_len[lst_index]
-                    last_key_2 = lst_len[lst_index - 1]
-                    lst_len.clear()
-                    lst_len.append(last_key_2)
-                    lst_len.append(last_key_1)
-                    break
-
-    for pl in players_list:
-        pl.action(key)
-
-    for key in bullets_list:
-        for bul in bullets_list[key]:
-            bul.move()
-
-    for pl in hearts_list:
-        for hp in pl:
-            hp.move()
-
-    screen.fill('black')
-
-    bricks.update()
-    bricks.draw(screen)
-
-    players.update()
-    players.draw(screen)
-
-    bullets_1.update()
-    bullets_1.draw(screen)
-    bullets_2.update()
-    bullets_2.draw(screen)
-
-    hearts_1.update()
-    hearts_1.draw(screen)
-    hearts_2.update()
-    hearts_2.draw(screen)
-
-    pygame.display.flip()
-
-    # if length != (len(bullets), len(bullets_list)):
-    #     print(length)
-    #     length = len(bullets), len(bullets_list)
-
-pygame.quit()
-exit()
+root.mainloop()
